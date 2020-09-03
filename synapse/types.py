@@ -362,22 +362,18 @@ def map_username_to_mxid_localpart(username, case_sensitive=False):
     return username.decode("ascii")
 
 
-class StreamToken(
-    namedtuple(
-        "Token",
-        (
-            "room_key",
-            "presence_key",
-            "typing_key",
-            "receipt_key",
-            "account_data_key",
-            "push_rules_key",
-            "to_device_key",
-            "device_list_key",
-            "groups_key",
-        ),
-    )
-):
+@attr.s(slots=True, frozen=True)
+class StreamToken:
+    room_key = attr.ib(type=str)
+    presence_key = attr.ib(type=str)
+    typing_key = attr.ib(type=str)
+    receipt_key = attr.ib(type=str)
+    account_data_key = attr.ib(type=str)
+    push_rules_key = attr.ib(type=str)
+    to_device_key = attr.ib(type=str)
+    device_list_key = attr.ib(type=str)
+    groups_key = attr.ib(type=str)
+
     _SEPARATOR = "_"
     START = None  # type: StreamToken
 
@@ -385,7 +381,7 @@ class StreamToken(
     def from_string(cls, string):
         try:
             keys = string.split(cls._SEPARATOR)
-            while len(keys) < len(cls._fields):
+            while len(keys) < len(attr.fields(cls)):
                 # i.e. old token from before receipt_key
                 keys.append("0")
             return cls(*keys)
@@ -393,7 +389,7 @@ class StreamToken(
             raise SynapseError(400, "Invalid Token")
 
     def to_string(self):
-        return self._SEPARATOR.join([str(k) for k in self])
+        return self._SEPARATOR.join([str(k) for k in attr.astuple(self)])
 
     @property
     def room_stream_id(self):
@@ -435,10 +431,10 @@ class StreamToken(
             return self
 
     def copy_and_replace(self, key, new_value):
-        return self._replace(**{key: new_value})
+        return attr.evolve(self, **{key: new_value})
 
 
-StreamToken.START = StreamToken(*(["s0"] + ["0"] * (len(StreamToken._fields) - 1)))
+StreamToken.START = StreamToken.from_string("s0_0")
 
 
 @attr.s(frozen=True, slots=True)
